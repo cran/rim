@@ -10,7 +10,6 @@
 #'
 #' To send a single command to Maxima and receive the corresponding output use \code{maxima.get()}. The output is returned in the format currently set (\code{maxima.getformat()}). The format can be changed using \code{maxima.setformat())}.
 #'
-#' @keywords internal
 #' @import methods
 #' @import digest 
 ## usethis namespace: start
@@ -44,7 +43,6 @@ maxima.stop <- function() {
 
 #' @describeIn rim-package Executes a single Maxima command provided by \code{command}. If no command ending character (\code{;} or \code{$} is provided, \code{;} is appended.
 #' @param command A character vector containing the maxima command.
-#' @param label Logical (FALSE). Returns character vector including output label (TRUE). If FALSE (default), return character vector without output label.
 #' @seealso \code{\link{maxima.engine}}
 #' @export
 maxima.get <- function(command) {
@@ -61,8 +59,11 @@ maxima.load <- function(module) maxima.env$maxima$loadModule(module)
 #' @describeIn rim-package A wrapper to the Maxima helper function \code{apropos} to lookup existing Maxima functions that match \code{keystring}.
 #' @param keystring A character vector containing a search term.
 #' @export
-maxima.apropos <- function(keystring) 
-  maxima.env$maxima$get(paste0("apropos(\"", keystring, "\");")) 
+maxima.apropos <- function(keystring) {
+  m <- maxima.env$maxima$get(paste0("apropos(\"", keystring, "\");")) 
+  attr(m, "format") <- maxima.getformat()
+  return(m)
+}
 
 
 #' @describeIn rim-package Sets the format of the output string from Maxima.
@@ -87,6 +88,12 @@ maxima.version <- function() {
   maxima.env$maxima$getVersion()
 }
 
+#' @describeIn rim-package Returns TRUE when an installation of Maxima has been detected, otherwise FALSE
+#' @export
+maxima.isInstalled <- function() {
+  maxima.env$maxima$isInstalled()
+}
+
 #' @describeIn rim-package Prints the input command preceding with the corresponding input reference label of an maxima S3-object returned by maxima.get()
 #' @export
 iprint <- function(x) {
@@ -97,6 +104,8 @@ iprint <- function(x) {
 }
 
 #' @describeIn rim-package Prints the maxima output part of an S3 object returned by maxima.get() 
+#' @param x S3 object of class "maxima"
+#' @param ... Additional arguments
 #' @method print maxima
 #' @export
 print.maxima <- function(x, ...) {

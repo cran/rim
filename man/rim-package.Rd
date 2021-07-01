@@ -12,6 +12,7 @@
 \alias{maxima.setformat}
 \alias{maxima.getformat}
 \alias{maxima.version}
+\alias{maxima.isInstalled}
 \alias{iprint}
 \alias{print.maxima}
 \title{rim}
@@ -32,6 +33,8 @@ maxima.getformat()
 
 maxima.version()
 
+maxima.isInstalled()
+
 iprint(x)
 
 \method{print}{maxima}(x, ...)
@@ -47,7 +50,9 @@ iprint(x)
 
 \item{format}{A character vector naming the output display format. Can be one of "linear" (default), "text2d", "latex" (i.e. $$...$$), "mathml".}
 
-\item{label}{Logical (FALSE). Returns character vector including output label (TRUE). If FALSE (default), return character vector without output label.}
+\item{x}{S3 object of class "maxima"}
+
+\item{...}{Additional arguments}
 }
 \description{
 Provides an interface to Maxima, a computer algebra system.
@@ -77,6 +82,8 @@ To send a single command to Maxima and receive the corresponding output use \cod
 
 \item \code{maxima.version}: Returns the version number of Maxima that is used
 
+\item \code{maxima.isInstalled}: Returns TRUE when an installation of Maxima has been detected, otherwise FALSE
+
 \item \code{iprint}: Prints the input command preceding with the corresponding input reference label of an maxima S3-object returned by maxima.get()
 
 \item \code{print.maxima}: Prints the maxima output part of an S3 object returned by maxima.get()
@@ -102,4 +109,3 @@ Authors:
 }
 
 }
-\keyword{internal}

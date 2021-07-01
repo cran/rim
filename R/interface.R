@@ -1,4 +1,45 @@
 #' @import R6
+MReader <- R6::R6Class("MReader",
+  public = list(
+    initialize = function(con) {
+      private$rc <- con
+      private$stash <- ""
+      private$complete <- TRUE
+    },
+    wasComplete = function() {
+      private$complete
+    }
+  ),
+  active = list(
+    read = function(value) {
+      if(!missing(value))
+	message("Input value ignored.")
+      private$complete <- TRUE 
+      suppressWarnings(withCallingHandlers(
+      {
+        x <- readLines(private$rc, n = 1) 
+        z <- paste0(private$stash, x)
+      },
+      warning = function(cnd) {
+	private$complete <- FALSE 
+      }))
+      if(private$complete && length(x)) 
+	private$stash <- ""
+      else {
+	private$stash <- z
+	private$complete <- FALSE
+      }
+
+      return(z)
+    }
+  ),
+  private = list(
+    stash = character(0),
+    complete = logical(0),
+    rc = NULL
+  )
+)
+
 Reply <- R6::R6Class("Reply",  
   public = list(
     initialize = function(con) {
@@ -9,11 +50,22 @@ Reply <- R6::R6Class("Reply",
       
       # read socket until including prompt 
       promptExpr <- "<<prompt;"
-      repeat {
-	z <- readLines(con, n = 1, warn = FALSE)
-	if(length(z)) {
+      promptHit <- FALSE
+      rdr <- MReader$new(con)
+      repeat { 
+	# z <- readLines(con, n = 1, warn = FALSE)
+	repeat {
+	  z <- rdr$read
+	  if(grepl(pattern = promptExpr, x = z)) {
+	    promptHit <- TRUE
+	    break
+	  }
+	  if(rdr$wasComplete())
+	    break
+	}
+	if(nchar(z)) {
 	  private$reply <- c(private$reply, z)
-	  if(grepl(pattern = promptExpr, x = z)) 
+	  if(promptHit) 
 	    break
 	}
       }
@@ -294,7 +346,7 @@ RMaxima <- R6::R6Class("RMaxima",
 
       }
 
-      private$crudeExecute(";") 
+      # private$crudeExecute(";") 
       stop(paste("Unsupported:", private$reply$concatenateParts()))
     },
     getLastPromptID = function() {
@@ -326,10 +378,13 @@ RMaxima <- R6::R6Class("RMaxima",
 	return(NA_integer_)
     },
     getVersion = function() {
-      if(private$running)
+      if(private$running) {
 	return(private$version)
-      else
+      }
+      else {
+	message("Version number undetermined. Maxima needs to be running.")
 	return(NULL)
+      }
     }
     ),
   private = list(
