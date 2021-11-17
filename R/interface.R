@@ -53,7 +53,6 @@ Reply <- R6::R6Class("Reply",
       promptHit <- FALSE
       rdr <- MReader$new(con)
       repeat { 
-	# z <- readLines(con, n = 1, warn = FALSE)
 	repeat {
 	  z <- rdr$read
 	  if(grepl(pattern = promptExpr, x = z)) {
@@ -79,26 +78,31 @@ Reply <- R6::R6Class("Reply",
       iprompt <- pvseq(iprompt)
       private$prompt <- private$reply[iprompt]
 
-      # output
-      iouts <- grep(pattern = "out;>>|<<out;", private$reply)
-      if(length(iouts) %% 2 != 0)
+      # outputs
+      # iouts <- grep(pattern = "out;>>|<<out;", private$reply)
+      # if(length(iouts) %% 2 != 0)
+      #   stop(paste("Could not fetch a output:", 
+      #   	   paste0(private$reply[-iprompts], collapse = "\n")))
+      # iouts <- pvseq(iouts)
+      # private$outs <- private$reply[iouts]
+
+      # private$prompt <- extract("prompt;>>|<<prompt;", private$reply)
+      private$outs <- extract("out;>>|<<out;", private$reply, TRUE)
+
+      if(length(attr(private$outs, "delimiters")) %% 2 != 0)
 	stop(paste("Could not fetch a output:", 
 		   paste0(private$reply[-iprompts], collapse = "\n")))
-      iouts <- pvseq(iouts)
-      private$outs <- private$reply[iouts]
+      private$outputLabel <- extract("lab;>>|<<lab;", private$outs)
 
-      # get output label
-      outputMatch <- regex(text = paste0(private$outs, collapse = "\n"), 
-			   pattern = "out;>>\\s+\\((%o(\\d+))\\)\\s\\n?([[:space:]|[:print:]]*)\\s+<<out;")
-      if(length(outputMatch)) {
-	private$outputLabel <- outputMatch[2]
-	private$result <- outputMatch[4]
-      }
-      else
+      # get output label from linear output
+      if(!length(private$outputLabel)) {
 	private$outputLabel <- NA_character_
+      }
 
       # betweens
-      private$betweens <- private$reply[-c(iprompt, iouts)]
+      # private$betweens <- private$reply[-c(iprompt, iouts)]
+      private$betweens <- private$reply[-c(iprompt, 
+					   attr(private$outs, "all"))]
 
       # get prompt ID/ label
       promptMatch <- regex(text = paste0(private$prompt, collapse = "\n"), 
@@ -126,7 +130,6 @@ Reply <- R6::R6Class("Reply",
     cat("  prompt: ", private$prompt, "\n", sep = "")
     cat("  outs: ", private$outs, "\n", sep = "")
     cat("  betweens: ", private$betweens, "\n", sep = "")
-    cat("  result: ", private$result, "\n", sep = "")
     invisible(private$outs)
   },
   is.empty = function() {
@@ -147,18 +150,13 @@ Reply <- R6::R6Class("Reply",
   isInterrupted = function() {
     any(grepl(pattern = "Console interrupt|User break|Interactive interrupt", 
 	      x = private$betweens))
+  }, 
+  hasWarning = function() { 
+    any(grepl(pattern = "warning|converting float", ignore.case = TRUE, x = private$betweens)) 
   },
   requireUser = function() {
     any(grepl(pattern = "TEXT;>>|<<TEXT;", 
 	      x = private$prompt))
-  },
-  checkMaximaWarning = function() {
-    any(grepl(pattern = "WARNING",
-	      x = private$betweens))
-  },
-  checkMaximaError = function() {
-    any(grepl(pattern = "^[[:space:]|[:print:]]{2,}$", 
-	      x = private$betweens))
   },
   concatenateParts = function() {
     paste0(private$reply, collapse = "\n")
@@ -166,16 +164,15 @@ Reply <- R6::R6Class("Reply",
   getPrompt = function() { 
     paste0(private$prompt, collapse = "\n")
   },
-  getBetweens = function() { 
+  getBetweens = function() {
     paste0(private$betweens, collapse = "\n")
   },
   getOuts = function() {
     paste0(private$outs, collapse = "\n")
   },
   getResult = function() {
-    private$result
+    # private$result
   }),
-
   private = list( 
     reply = character(),
     prompt = character(),
@@ -184,7 +181,6 @@ Reply <- R6::R6Class("Reply",
     outputLabel = character(),
     outs = character(),
     betweens = character(),
-    result = character(),
     validPrompt = logical(),
     dollar = logical()
   ),
@@ -197,8 +193,28 @@ Reply <- R6::R6Class("Reply",
 	  private$dollar <- value
 	else
 	  stop("Expected logical value") 
-    }
-  )
+    },
+    result = function(value) {
+      if(!missing(value))
+	stop("'result' is read-only") 
+      if(self$suppressed){
+	return(list())
+      }
+      else {
+	wtl <- extract("wtl;>>|<<wtl;", private$outs)
+	wol <- extract("wol;>>|<<wol;", private$outs)
+	return(list("wtl" = list("linear" = extract("lin;>>|<<lin;", wtl),
+				 "ascii" = extract("two;>>|<<two;", wtl),
+				 "latex" = extract("tex;>>|<<tex;", wtl),
+				 "inline" = extract("tin;>>|<<tin;", wtl),
+				 "mathml" = extract("htm;>>|<<htm;", wtl)),
+		    "wol" = list("linear" = extract("lin;>>|<<lin;", wol),
+				 "ascii" = extract("two;>>|<<two;", wol),
+				 "latex" = extract("tex;>>|<<tex;", wol),
+				 "inline" = extract("tin;>>|<<tin;", wol),
+				 "mathml" = extract("htm;>>|<<htm;", wol))))
+      }
+    })
 )
 
 RMaxima <- R6::R6Class("RMaxima",
@@ -206,7 +222,8 @@ RMaxima <- R6::R6Class("RMaxima",
     initialize = function(maximaPath = "maxima", 
 			  workDir, 
 			  utilsDir, 
-			  display = "maxima-init-lin", 
+			  display = "display", 
+			  preload,
 			  port = 27182) {
 
       if(missing(maximaPath))
@@ -218,6 +235,11 @@ RMaxima <- R6::R6Class("RMaxima",
 	private$workDir = getwd()
       else
 	private$workDir
+
+      if(!missing(preload))
+	private$preload <- paste0("-p ", preload, ".lisp")
+      else
+	private$preload <- ""
 
       if(missing(utilsDir)) {
 	private$utilsDir <- dirname(system.file("extdata", 
@@ -232,6 +254,11 @@ RMaxima <- R6::R6Class("RMaxima",
       }
       else
 	private$utilsDir <- utilsDir
+
+      if(!missing(preload))
+	private$preload <- paste0("-p ", private$utilsDir, "/", preload, ".lisp")
+      else
+	private$preload <- ""
 
       private$display <- display
       private$port <- port
@@ -288,62 +315,54 @@ RMaxima <- R6::R6Class("RMaxima",
 
       private$crudeExecute(command)
 
+      if(private$reply$hasWarning())
+	warning(private$reply$getBetweens())
+      
       if(private$reply$is.empty()) {
 	if(private$reply$requireUser()) {
 	  return(regex(text = private$reply$getPrompt(), 
-		      pattern = "TEXT;>>(.*)<<TEXT;")[2]) 
+		       pattern = "TEXT;>>(.*)<<TEXT;")[2]) 
 	}
 
 	if(!private$reply$checkPrompt()) {
-	   stop(paste("Unsupported.", gsub(pattern = "TEXT;>>|<<TEXT;", 
-	 				     replacement = "", 
-	 				     x = private$reply$getBetweens())))
+	  stop(paste("Unsupported.", gsub(pattern = "TEXT;>>|<<TEXT;", 
+					  replacement = "", 
+					  x = private$reply$getBetweens())))
 	}
 
 	if(private$reply$isInterrupted()) {
 	  stop("Command execution was interrupted.")
 	}
+        
+	# logic: it's an error, if it's not definitely a warning
+	if(nchar(err <- private$reply$getBetweens()) && 
+	   !private$reply$hasWarning()) {
+	     stop(err) 
+	 }
 
-	if(private$reply$checkMaximaWarning()) {
-	  w <- gsub(pattern = "TEXT;>>|<<TEXT;", 
-		       replacement = "", 
-		       x = private$reply$getBetweens())
-	  warning(w)
-	  return(structure("",
-			   input.label = private$lastInputLabel,
-			   output.label = private$lastOutputLabel, 
-			   command = command, 
-			   suppressed = private$reply$suppressed,
-			   class = "maxima"
-			   ))
-	}
-
-	if(private$reply$checkMaximaError()) {
-	  stop(gsub(pattern = "TEXT;>>|<<TEXT;", 
-		    replacement = "", 
-		    x = private$reply$getBetweens())) 
-	}
-
-	return(structure("",
-			 input.label = private$lastInputLabel,
-			 output.label = private$lastOutputLabel, 
-			 command = command, 
-			 suppressed = private$reply$suppressed,
-			 class = "maxima"
-			 ))
-      }
-
-      # validate output and return if valid
-      if(!is.na(private$reply$getOutputLabel())) {
-	private$lastOutputLabel <- private$reply$getOutputLabel()
-	# return(private$reply$getResult())
-	return(structure(private$reply$getResult(),
+	# conclusion: output must have been suppressed
+	return(structure(private$reply$result,
 			 input.label = private$lastInputLabel,
 			 output.label = private$lastOutputLabel,
 			 command = command,
 			 suppressed = private$reply$suppressed,
 			 class = "maxima"))
+      }
 
+      # forward any messages if no warning has been detected already
+      if(nchar(private$reply$getBetweens()) && 
+	 !private$reply$hasWarning())
+	message(private$reply$getBetweens())
+
+      # validate output and return if valid
+      if(!is.na(private$reply$getOutputLabel())) {
+	private$lastOutputLabel <- private$reply$getOutputLabel()
+	return(structure(private$reply$result,
+			 input.label = private$lastInputLabel,
+			 output.label = private$lastOutputLabel,
+			 command = command,
+			 suppressed = private$reply$suppressed,
+			 class = "maxima"))
       }
 
       # private$crudeExecute(";") 
@@ -362,14 +381,10 @@ RMaxima <- R6::R6Class("RMaxima",
       if(length(module) > 0 && nchar(module))
 	self$get(paste0("load(\"", module, "\")$")) 
     },
-    loadInit = function(file) {
-      if(length(file) > 0 && nchar(file) > 0) {
-	self$get(paste0("(load(\"", private$utilsDir, "/", file, "\"),",
-			"linnum:linenum-1, %);"))
-      }
-
-      # return NULL
-      invisible()
+    get_stuck = function(command) {
+      # executes command without advancing reference labels
+      if(length(command) && nchar(command))
+	self$get(paste0("(", command, "linenum:linenum-1, %)$"))
     },
     getPort = function() {
       if(private$running) 
@@ -396,6 +411,7 @@ RMaxima <- R6::R6Class("RMaxima",
     utilsDir = character(),
     maximaPath = NA_character_,
     display = character(),
+    preload = character(),
     reply = NULL,
     running = FALSE,
     lastPromptID = integer(),
@@ -419,7 +435,8 @@ RMaxima <- R6::R6Class("RMaxima",
 	      c(# "-q", 
 		paste0("-s ", private$port), 
 		paste0("--userdir=", private$utilsDir), 
-		paste0("--init=", private$display)), 
+		paste0("--init=", private$display),
+		paste0(private$preload)), 
 	      wait = FALSE, 
 	      stdout = FALSE, 
 	      stderr = stdout())
@@ -521,4 +538,42 @@ pvseq <- function(x) {
   }
   else
     x
+}
+
+#' Extract elements from character vector 'from' by specifiying delimiters as a single regular expression. 
+#' @param delimiters Character vector specifying the delimiters that fence the elements to be extracted
+#' @param from Character vector of length 1 containing the regular expression to be matched
+#' @param inform logical of length 1. Whether information about the extraction indices should be set as attributes to the return value (TRUE), or not (FALSE, default).
+#' @param without logical of length 1. Should the delimiters be excluded from the output (default)?
+#' @return character vector with the elements extracted. Possibly empty, in case delimiters did not match
+#' @noRd
+extract <- function(delimiters, from, inform = FALSE, without = TRUE) {
+  if(missing(delimiters))
+    stop("Parameter 'delimiters' not provided")
+  if(length(delimiters) > 2L)
+    warning("Length of 'delimiters > 2, only the first two will be used.")
+  if(length(delimiters) == 1L)
+    delimiters <- c(delimiters, delimiters)
+   if(missing(from))
+     stop("Parameter 'from' not provided")
+
+   i <- c(grep(pattern = delimiters[1], from), grep(pattern = delimiters[2], from))
+   if(length(i) %% 2 != 0)
+     stop(paste("Could not fetch delimiter pair:", 
+		paste0(from, collapse = "\n")))
+   ii <- pvseq(i)
+   ee <- ii[!(ii %in% i)]
+   if(without)
+     r <- from[ee]
+   else 
+     r <- from[ii]
+
+   if(inform) {
+     attr(r, "all") <- ii
+     attr(r, "elements") <- ee 
+     attr(r, "delimiters") <- i
+     attr(r, "without") <- without
+   }
+
+   return(r)
 }

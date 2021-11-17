@@ -1,0 +1,73 @@
+($load "draw")
+;;by default denotes the current working directory
+(defvar $plot_output_folder ".") 
+(defvar *builtin-plot2d* (symbol-function '$plot2d-impl))
+(defvar *builtin-plot3d* (symbol-function '$plot3d-impl))
+(defvar *builtin-draw* (symbol-function '$draw))
+(defvar *builtin-draw2d* (symbol-function '$draw2d))
+(defvar *builtin-draw3d* (symbol-function '$draw3d))
+
+(defmfun $plot2d (&rest args)
+  (if (member '$png_file args)
+    (apply *builtin-plot2d* args)
+    (let*
+      ((nnn ($substring ($sha256sum ($sconcat "plot2d" ($simplode args))) 1 7))
+       (png-file ($sconcat $plot_output_folder "/plot2d-" nnn ".png"))
+       (args-new (append args (list `((mlist) $png_file ,png-file)))))
+      (apply *builtin-plot2d* args-new))))
+
+(defmfun $plot3d (&rest args)
+  (if (member '$png_file args)
+    (apply *builtin-plot3d* args)
+    (let*
+      ((nnn ($substring ($sha256sum ($sconcat "plot3d" ($simplode args))) 1 7))
+       (png-file ($sconcat $plot_output_folder "/plot3d-" nnn ".png"))
+       (args-new (append args (list `((mlist) $png_file ,png-file)))))
+      (apply *builtin-plot3d* args-new))))
+
+;; a utility function
+(defun flatten (lst)
+  (labels ((rflatten (lst1 acc)
+             (dolist (el lst1)
+               (if (listp el)
+                   (setf acc (rflatten el acc))
+                   (push el acc)))
+             acc))
+    (reverse (rflatten lst nil))))
+
+(defmfun $draw (&rest args)
+  (if (member '$file_name (flatten args))
+    (apply *builtin-draw* args)
+    (let*
+      ((nnn ($substring ($sha256sum ($sconcat "draw" ($simplode args))) 1 7))
+       (file_name ($sconcat $plot_output_folder "/draw-" nnn))
+       (args-new (append args (list `((mequal) $file_name ,file_name))))
+       (args-new (append args-new (list `((mequal) $terminal $png)))))
+      (apply *builtin-draw* args-new)
+      ;; (format t "inside draw~%")
+      ;; (format t "~a~%" (flatten args-new))
+      `((mlist) ,file_name ,($sconcat file_name ".png")))))
+
+(defmfun $draw2d (&rest args)
+  (if (member '$file_name (flatten args))
+    (apply *builtin-draw2d* args)
+    (let*
+      ((nnn ($substring ($sha256sum ($sconcat "draw2d" ($simplode args))) 1 7))
+       (file_name ($sconcat $plot_output_folder "/draw2d-" nnn))
+       (args-new (append args (list `((mequal) $file_name ,file_name))))
+       (args-new (append args-new (list `((mequal) $terminal $png)))))
+      (apply *builtin-draw2d* args-new)
+      ;; (format t "inside draw2d")
+      ;; (format t "~a~%" (flatten args-new))
+      `((mlist) ,file_name ,($sconcat file_name ".png")))))
+
+(defmfun $draw3d (&rest args)
+  (if (member '$file_name  (flatten args))
+    (apply *builtin-draw3d* args)
+    (let*
+      ((nnn ($substring ($sha256sum ($sconcat "draw3d" ($simplode args))) 1 7))
+       (file_name ($sconcat $plot_output_folder "/draw3d-" nnn))
+       (args-new (append args (list `((mequal) $file_name ,file_name))))
+       (args-new (append args-new (list `((mequal) $terminal $png)))))
+      (apply *builtin-draw3d* args-new)
+      `((mlist) ,file_name ,($sconcat file_name ".png")))))

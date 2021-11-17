@@ -1,10 +1,14 @@
 ---
 title: "knitr engine test page"
-output: pdf_document
+output: html_document
 ---
 
 ```{r}
-maxima.engine.format("latex")
+library(OpenImageR)
+maxima.options(engine.format = "latex", 
+	       engine.label = TRUE,
+	       inline.format = "inline", 
+	       inline.label = FALSE)
 ```
 
 ```{maxima}
@@ -17,6 +21,9 @@ assume(R > 0);
 'L = L;
 'integrate(x, x, 0, 'L) = integrate(x, x, 0, L);
 ```
+
+This is an inline test: `r maxima.inline("'L = L;")`.
+
 
 ```{maxima}
 sqrt(3/4);
@@ -35,6 +42,148 @@ diff(f(x), x);
 log(%o1);
 ```
 
+
+# Plots
+
+```{maxima, fig.cap = "plot2d()", fig.align="center", fig.show='hide'}
+r: (exp(cos(t))-2*cos(4*t)-sin(t/12)^5)$
+plot2d([parametric, r*sin(t), r*cos(t), [t,-8*%pi,8*%pi]]);
+```
+
+```{maxima, fig.cap = "plot3d()", fig.align="center", fig.show='hide'}
+plot3d(log (x^2*y^2), [x, -2, 2], [y, -2, 2],[grid, 29, 29],
+       [palette, [gradient, red, orange, yellow, green]],
+       color_bar, [xtics, 1], [ytics, 1], [ztics, 4],
+       [color_bar_tics, 4]);
+```
+
+```{maxima, fig.cap = "draw()", fig.align="center", fig.show='hide'}
+example1:
+  gr3d (title          = "Controlling color range",
+        enhanced3d     = true,
+        color          = green,
+        cbrange        = [-3,10],
+        explicit(x^2+y^2, x,-2,2,y,-2,2)) $
+
+example2:
+  gr3d (title          = "Playing with tics in colorbox",
+        enhanced3d     = true,
+        color          = green,
+        cbtics         = {["High",10],["Medium",05],["Low",0]},
+        cbrange = [0, 10],
+        explicit(x^2+y^2, x,-2,2,y,-2,2))$
+
+example3:
+  gr3d (title      = "Logarithmic scale to colors",
+        enhanced3d = true,
+        color      = green,
+        logcb      = true,
+        logz       = true,
+        palette    = [-15,24,-9],
+        explicit(exp(x^2-y^2), x,-2,2,y,-2,2))$
+
+draw(
+  dimensions = [500,1500],
+  example1, example2, example3)$
+```
+
+```{maxima, fig.cap = "draw2d()", fig.align="center", fig.show='hide'}
+draw2d(
+  dimensions = [1000, 1000],
+  proportional_axes = xy,
+  fill_color        = sea_green,
+  color             = aquamarine,
+  line_width        = 6,
+  ellipse(7,6,2,3,0,360))$
+``` 
+
+```{maxima, fig.cap = "draw3d()", fig.align="center", fig.show='hide'}
+draw3d(
+   dimensions = [1000, 1000],
+   surface_hide      = true,
+   axis_3d           = false,
+   proportional_axes = xyz,
+ 
+   color             = blue,
+   cylindrical(z,z,-2,2,a,0,2*%pi), 
+ 
+   color            = brown,
+   cylindrical(3,z,-2,2,az,0,%pi),
+ 
+   color            = green,
+   cylindrical(sqrt(25-z^2),z,-5,5,a,0,%pi))$
+```
+
+
+```{r, eval = TRUE, warning=FALSE, results="markup"}
+pft <- list.files(pattern = "(?:plot|draw)(2d|3d)?-[[:print:]]{6}\\.png", full.names = TRUE)
+
+pref <- system.file("extdata", 
+		    c("draw-ref.png",
+		      "draw2d-ref.png", 
+		      "draw3d-ref.png", 
+		      "plot2d-ref.png", 
+		      "plot3d-ref.png"), 
+		    package = "rim", 
+		    mustWork = TRUE)
+ 
+r1 <- readImage(pref[1])
+r2 <- readImage(pref[2])
+r3 <- readImage(pref[3])
+r4 <- readImage(pref[4])
+
+p1 <- readImage(pft[1])
+p2 <- readImage(pft[2])
+p3 <- readImage(pft[3])
+p4 <- readImage(pft[4])
+
+p1 <- rgb_2gray(RGB_image = p1)
+p2 <- rgb_2gray(RGB_image = p2)
+p3 <- rgb_2gray(RGB_image = p3)
+p4 <- rgb_2gray(RGB_image = p4)
+
+r1 <- rgb_2gray(RGB_image = r1)
+r2 <- rgb_2gray(RGB_image = r2)
+r3 <- rgb_2gray(RGB_image = r3)
+r4 <- rgb_2gray(RGB_image = r4)
+
+hs1 <- average_hash(p1, hash_size = 32, MODE = "binary")
+hs2 <- average_hash(p2, hash_size = 32, MODE = "binary")
+hs3 <- average_hash(p3, hash_size = 32, MODE = "binary")
+hs4 <- average_hash(p4, hash_size = 32, MODE = "binary")
+
+rs1 <- average_hash(r1, hash_size = 32, MODE = "binary")
+rs2 <- average_hash(r2, hash_size = 32, MODE = "binary")
+rs3 <- average_hash(r3, hash_size = 32, MODE = "binary")
+rs4 <- average_hash(r4, hash_size = 32, MODE = "binary")
+
+if((d <- sum(abs(hs1 - rs1))) < 100) {
+  paste0("OK")
+} else {
+  paste0("Not OK: ", d)
+}
+
+if((d <- sum(abs(hs2 - rs2))) < 100) {
+  paste0("OK")
+} else {
+  paste0("Not OK: ", d)
+}
+
+if((d <- sum(abs(hs3 - rs3))) < 100) {
+  paste0("OK")
+} else {
+  paste0("Not OK: ", d)
+}
+
+if((d <- sum(abs(hs4 - rs4))) < 100) {
+  paste0("OK")
+} else {
+  paste0("Not OK: ", d)
+}
+```
+
+# Normal Distribution
+
 ```{maxima}
 area(dist) := integrate(dist, x, minf, inf)$
 mean(dist) := area(dist*x)$
@@ -42,8 +191,6 @@ EX2(dist) := area(dist*x^2)$
 variance(dist) := EX2(dist) - mean(dist)^2$
 mgf(dist) := area(dist*%e^(x*t))$
 ```
-
-# Normal Distribution
 
 ```{maxima}
 normal(x) := 
