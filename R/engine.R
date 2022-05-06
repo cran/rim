@@ -20,39 +20,49 @@ maxima.engine <- function(options) {
   cmds <- gather(code)
   ll <- list()
   ccode <- character()
-  for(i in 1:length(cmds)) {
-    pc <- paste0(code[cmds[[i]]], collapse = "\n")
-    # if plotting command, then it needs to end with ";"
-    if(grepl(pattern = "^(?:plot|draw)(?:2d|3d)?\\([[:print:]|[:space:]]+\\)[[:space:]]*\\$$", x = pc))
-      pc <- gsub(pattern = "\\$", replacement = ";", x = pc)
-    tt <- maxima.env$mx$get(pc)
-    ccode <- append(ccode, iprint(tt))
-
-    if(!attr(tt, "suppressed")) {
-      ll <- append(ll, list(structure(list(src = ccode), class = "source")))
-      if(grepl(pattern = "^(?:plot|draw)(?:2d|3d)?\\([[:print:]|[:space:]]+\\)[[:space:]]*;", x = pc)) {
-	tt$wol$ascii <- paste0(tt$wol$ascii, collapse="")
-	pm <- regexec(pattern = "^\\[[[:print:]]+, ([[:print:]]+-[[:print:]]+\\.(?:png|pdf))\\]", text = tt$wol$ascii)
-	pm <- trim(unlist(regmatches(m = pm, x = tt$wol$ascii))[2])
-	# pm <- normalizePath(pm)
-	ll <- append(ll, list(knitr::include_graphics(pm)))
-	maxima.env$plots <- append(maxima.env$plots, normalizePath(pm))
+  if(options$eval) {
+    for(i in 1:length(cmds)) {
+      pc <- paste0(code[cmds[[i]]], collapse = "\n")
+      # if plotting command, then it needs to end with ";"
+      if(grepl(pattern = "^(?:plot|draw)(?:2d|3d)?\\([[:print:]|[:space:]]+\\)[[:space:]]*\\$$", x = pc)) {
+	pc <- gsub(pattern = "\\$", replacement = ";", x = pc)
       }
-      else 
-	ll <- append(ll, engine_print(tt))
-      ccode <- character()
-    }
-  }
+      tt <- maxima.env$mx$get(pc)
+      ccode <- append(ccode, iprint(tt))
 
-  if(length(ccode))
-    ll <- append(ll, list(structure(list(src = ccode), class = "source")))
+      if(!attr(tt, "suppressed")) {
+	if(options$echo)
+	  ll <- append(ll, list(structure(list(src = ccode), class = "source")))
+	if(grepl(pattern = "^(?:plot|draw)(?:2d|3d)?\\([[:print:]|[:space:]]+\\)[[:space:]]*;", x = pc)) {
+	  tt$wol$ascii <- paste0(tt$wol$ascii, collapse="")
+	  # pm <- regexec(pattern = "^\\[[[:print:]]+, ([[:print:]]+-[[:print:]]+\\.(?:png|pdf))\\]", text = tt$wol$ascii)
+	  pm <- regexec(pattern = "(\\.\\/(?:plot|draw)(?:2d|3d)?-[a-z0-9]+\\.(?:png|pdf))\\]$", text = tt$wol$ascii)
+	  pm <- trim(unlist(regmatches(m = pm, x = tt$wol$ascii))[2])
+	  # pm <- normalizePath(pm)
+	  ll <- append(ll, list(knitr::include_graphics(pm)))
+	  maxima.env$plots <- append(maxima.env$plots, normalizePath(pm))
+	}
+	else 
+	  ll <- append(ll, engine_print(tt))
+	ccode <- character()
+      }
+    }
+
+    if(length(ccode))
+      if(options$echo)
+	ll <- append(ll, list(structure(list(src = ccode), class = "source")))
+  } else {
+    if(options$echo)
+	ll <- append(ll, list(structure(list(src = code), class = "source")))
+  }
 
   if (last_label(options$label)) { 
     maxima.engine.stop()
   }
 
   # engine_output(options, options$code, out)
-  engine_output(options, out = ll)
+  # engine_output(options, out = ll)
+  engine_output(opts_current$merge(list(results = maxima.options$engine.results)), out = ll)
 }
 
 maxima.engine.start <- function() {
