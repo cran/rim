@@ -1,10 +1,69 @@
-;;TODO : Potential smalloptimization - a+-0=a, a*/1=a
-;;TODO : Potential optimization, prevent blank v.ins({}) lines
-(defparameter *maxima-function-dictionary-name* "f")
-(defparameter *maxima-variables-dictionary-name* "v")
-(defparameter *python-hierarchial-dict-name* "Stack")
+;; working examples of forms
+;; ((MPLUS) ((MQUOTIENT) ((%LOG SIMP) ((MPLUS SIMP) 1 $X)) 2) ((MMINUS) ((MQUOTIENT) ((%LOG SIMP) ((MPLUS SIMP) -1 $X)) 2)))
+
+;; ((MPLUS) ((MMINUS) $D) $C $B $A)
+
+;; output form of command integrate(1 / (1 + x^4), x);
+;; ((MPLUS)
+;; ((MQUOTIENT)
+;;  ((%LOG SIMP)
+;;   ((MPLUS SIMP) 1
+;;    ((MTIMES SIMP RATSIMP) ((MEXPT SIMP) 2 ((RAT SIMP) 1 2)) $X)
+;;    ((MEXPT SIMP RATSIMP) $X 2)))
+;;  ((MEXPT) 2 ((RAT) 5 2)))
+;; ((MMINUS)
+;;  ((MQUOTIENT)
+;;   ((%LOG SIMP)
+;;    ((MPLUS SIMP) 1
+;;     ((MTIMES SIMP RATSIMP) -1 ((MEXPT SIMP) 2 ((RAT SIMP) 1 2)) $X)
+;;     ((MEXPT SIMP RATSIMP) $X 2)))
+;;   ((MEXPT) 2 ((RAT) 5 2))))
+;; ((MQUOTIENT)
+;;  ((%ATAN SIMP)
+;;   ((MTIMES SIMP) ((MEXPT SIMP) 2 ((RAT SIMP) -1 2))
+;;    ((MPLUS SIMP) ((MEXPT SIMP) 2 ((RAT SIMP) 1 2))
+;;     ((MTIMES SIMP RATSIMP) 2 $X))))
+;;  ((MEXPT) 2 ((RAT) 3 2)))
+;; ((MQUOTIENT)
+;;  ((%ATAN SIMP)
+;;   ((MTIMES SIMP) ((MEXPT SIMP) 2 ((RAT SIMP) -1 2))
+;;    ((MPLUS SIMP)
+;;     ((MTIMES SIMP RATSIMP) -1 ((MEXPT SIMP) 2 ((RAT SIMP) 1 2)))
+;;     ((MTIMES SIMP RATSIMP) 2 $X))))
+;;  ((MEXPT) 2 ((RAT) 3 2))))
+
+(defparameter *test-form* '((MPLUS)
+ ((MQUOTIENT)
+  ((%LOG SIMP)
+   ((MPLUS SIMP) 1
+    ((MTIMES SIMP RATSIMP) ((MEXPT SIMP) 2 ((RAT SIMP) 1 2)) $X)
+    ((MEXPT SIMP RATSIMP) $X 2)))
+  ((MEXPT) 2 ((RAT) 5 2)))
+ ((MMINUS)
+  ((MQUOTIENT)
+   ((%LOG SIMP)
+    ((MPLUS SIMP) 1
+     ((MTIMES SIMP RATSIMP) -1 ((MEXPT SIMP) 2 ((RAT SIMP) 1 2)) $X)
+     ((MEXPT SIMP RATSIMP) $X 2)))
+   ((MEXPT) 2 ((RAT) 5 2))))
+ ((MQUOTIENT)
+  ((%ATAN SIMP)
+   ((MTIMES SIMP) ((MEXPT SIMP) 2 ((RAT SIMP) -1 2))
+    ((MPLUS SIMP) ((MEXPT SIMP) 2 ((RAT SIMP) 1 2))
+     ((MTIMES SIMP RATSIMP) 2 $X))))
+  ((MEXPT) 2 ((RAT) 3 2)))
+ ((MQUOTIENT)
+  ((%ATAN SIMP)
+   ((MTIMES SIMP) ((MEXPT SIMP) 2 ((RAT SIMP) -1 2))
+    ((MPLUS SIMP)
+     ((MTIMES SIMP RATSIMP) -1 ((MEXPT SIMP) 2 ((RAT SIMP) 1 2)))
+     ((MTIMES SIMP RATSIMP) 2 $X))))
+  ((MEXPT) 2 ((RAT) 3 2)))))
+
 (defparameter *symbols-directly-convert* '()
-  "List containing symbols to be converted as it is to Python symbols rather than maxima_vars[\"symbol\"]")
+  "List containing symbols to be converted as it is to R symbols rather than maxima_vars[\"symbol\"]")
+
+;; is this needed?
 (defparameter *ins-method-name* "ins")
 (defparameter *assignment-method-name* "assign")
 
@@ -68,12 +127,6 @@
 
 (defun symbol-to-ir (form)
   `(symbol ,(symbol-name-to-string form)))
-
-(defun symbol-to-dictionary-ir (form &optional (dict-name nil))
-  `(element-array (symbol
-		   ,(cond (dict-name dict-name)
-			  (t *maxima-variables-dictionary-name*)))
-		  (string ,(symbol-name-to-string form))))
 
 (defun plot-to-ir (form)
   `(funcall
@@ -471,16 +524,19 @@
 		   ,(symbol-to-ir (caaadr form)))))
 
 ;;; Generates IR for atomic forms
+;;; This function produces output that is fed into
+;;; symbols-to-python, which simply outputs the results cadr
+(cadr '(symbol "NULL"))
 (defun atom-to-ir (form)
   (cond
-    ((eq form 'nil) `(symbol "None"))
-    ((eq form '$true) `(symbol "True"))
+    ((eq form 'nil) `(symbol "NULL"))
+    ((eq form '$true) `(symbol "TRUE"))
     ((stringp form) `(string ,form))
     ((not (symbolp form)) `(num ,form 0))
     ((eq form '$%i) '(num 0 1)) ; iota complex number
-    ((eq form '$%pi) '(num (symbol "math.pi") 0)) ; Pi
-    ((eq form '$%e) '(num (symbol "math.e") 0)) ; Euler's Constant
-    ((eq form '$inf) '(num (symbol "math.inf") 0))
+    ((eq form '$%pi) '(num (symbol "pi") 0)) ; Pi
+    ((eq form '$%e) '(num (symbol "exp(1)") 0)) ; Euler's Constant
+    ((eq form '$inf) '(num (symbol "Inf") 0))
     (t
      (cond
        ((member form *symbols-directly-convert*) (symbol-to-ir form))
@@ -492,24 +548,24 @@
     ((atom (caar form))
      (let ((type (gethash (caar form) *maxima-direct-ir-map*)))
        (cond
-					; If the form is present in *maxima-direct-ir-map*
+	 ; If the form is present in *maxima-direct-ir-map*
 	 (type
 	  (append type (mapcar
-			#'maxima-to-ir
-			(cdr form))))
-					; If the form is to be transformed in a specific way
+			 #'maxima-to-ir
+			 (cdr form))))
+	 ; If the form is to be transformed in a specific way
 	 ((setf type (gethash (caar form) *maxima-special-ir-map*))
 	  (funcall type form))
 	 ((member 'array (car form))
 	  (array-ref-to-ir (caar form) (cdr form)))
 	 (t
 	  (append `(funcall
-		    ,(cond
-		       ((member (caar form) *symbols-directly-convert*) (symbol-to-ir (caar form)))
-		       (t `(element-array ,*maxima-function-dictionary-name* (string ,(symbol-name-to-string (caar form)))))))
+		     ,(cond
+			((member (caar form) *symbols-directly-convert*) (symbol-to-ir (caar form)))
+			(t `(element-array ,*maxima-function-dictionary-name* (string ,(symbol-name-to-string (caar form)))))))
 		  (mapcar
-		   #'maxima-to-ir
-		   (cdr form)))))))))
+		    #'maxima-to-ir
+		    (cdr form)))))))))
 
 ;;; Generates IR for Maxima expression
 (defun maxima-to-ir (form &optional (is_stmt nil))
@@ -524,224 +580,3 @@
 			   *ir-forms-to-append*
 			   `(,ir)))
 	  (t ir))))
-
-;;; Driver function for the translator, calls the function
-;;; maxima-to-ir and then ir-to-python
-(defun $pytranslate (form &optional (print-ir nil))
-  (setq *ir-forms-to-append* '())
-  (setf form (nformat form))
-  (cond (print-ir (ir-to-python (print (maxima-to-ir form t))))
-	(t (ir-to-python (maxima-to-ir form t)))))
-
-(defvar *ir-python-direct-templates*
-  (let ((ht (make-hash-table)))
-    (setf (gethash 'num ht) 'num-to-python)
-    (setf (gethash 'asterisk ht) 'asterisk-to-python)
-    (setf (gethash 'body ht) 'body-to-python)
-    (setf (gethash 'body-indented ht) 'body-indented-to-python)
-    (setf (gethash 'op ht) 'op-to-python)
-    (setf (gethash 'op-no-bracket ht) 'op-no-bracket-to-python)
-    (setf (gethash 'comp-op ht) 'op-to-python)
-    (setf (gethash 'boolop ht) 'op-to-python)
-    (setf (gethash 'op ht) 'op-to-python)
-    (setf (gethash 'del ht) 'del-to-python)
-    (setf (gethash 'unary-op ht) 'unary-op-to-python)
-    (setf (gethash 'symbol ht) 'symbol-to-python)
-    (setf (gethash 'assign ht) 'assign-to-python)
-    (setf (gethash 'string ht) 'string-to-python)
-    (setf (gethash 'funcall ht) 'funcall-to-python)
-    (setf (gethash 'struct-list ht) 'struct-list-to-python)
-    (setf (gethash 'func-def ht) 'func-def-to-python)
-    (setf (gethash 'element-array ht) 'element-array-to-python)
-    (setf (gethash 'conditional ht) 'conditional-to-python)
-    (setf (gethash 'cond-if ht) 'cond-if-to-python)
-    (setf (gethash 'cond-else ht) 'cond-else-to-python)
-    (setf (gethash 'cond-elif ht) 'cond-elif-to-python)
-    (setf (gethash 'lambda ht) 'lambda-to-python)
-    (setf (gethash 'for-list ht) 'for-list-to-python)
-    (setf (gethash 'while-loop ht) 'while-loop-to-python)
-    (setf (gethash 'obj-funcall ht) 'obj-funcall-to-python)
-    (setf (gethash 'dictionary ht) 'dictionary-to-python)
-    ht))
-
-;;; Generates Python source for given IR form
-(defun ir-to-python (form &optional
-			    (indentation-level 0)
-			    (is_stmt nil))
-  (concatenate
-   'string
-   (cond
-     (is_stmt ; To determine if the form needs to be indented
-      (format nil "~v@{~A~:*~}" indentation-level "    "))
-     (t ""))
-   (typecase form
-     (cons
-      (let ((type (gethash (car form) *ir-python-direct-templates*)))
-	(cond
-	  (type (funcall type form indentation-level))
-	  (t (format nil "no-covert : (~a)" form)))))	
-     (t
-      (format nil "~a" form)))))
-
-;;; Code below is for functions handling specefic IR forms and
-;;; generating the corresponding Python code.
-
-(defun dictionary-to-python (form indentation-level)
-  (format nil "{~{~a~^, ~}}"
-	  (mapcar (lambda (elm) (ir-to-python `(op-no-bracket #\: ,(ir-to-python (car elm))
-							      ,(ir-to-python (cadr elm)))
-					      indentation-level))
-		  (cdr form))))
-
-(defun obj-funcall-to-python (form indentation-level)
-  (format nil "~a.~a(~{~a~^, ~})"
-	  (ir-to-python (cadr form))
-	  (ir-to-python (caddr form))
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level))
-	   (cdddr form))))	  
-
-(defun while-loop-to-python (form indentation-level)
-  (format nil "while ~a:~&~a"
-	  (ir-to-python (cadr form) indentation-level)
-	  (ir-to-python (caddr form) indentation-level)))
-
-(defun for-list-to-python (form indentation-level)
-  (format nil "for ~a in ~a:~&~a"
-	  (ir-to-python (cadr form) indentation-level)
-	  (ir-to-python (caddr form) indentation-level)
-	  (ir-to-python (clast form) indentation-level)))
-
-(defun lambda-to-python (form indentation-level)
-  (format nil "lambda ~{~a~^, ~}: ~a"
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level))
-	   (cadr form))
-	  (ir-to-python (clast form) indentation-level)))
-
-(defun conditional-to-python (form indentation-level)
-  (format nil "(~a if ~a else ~a)"
-	  (ir-to-python (caddr form) indentation-level)
-	  (ir-to-python (cadr form) indentation-level)
-	  (ir-to-python (cadddr form) indentation-level)))
-
-(defun cond-if-to-python (form indentation-level)
-  (format nil "if ~a:"
-	  (ir-to-python (cadr form) indentation-level)))
-
-(defun cond-else-to-python (form indentation-level)
-  (format nil "else:"))
-
-(defun cond-elif-to-python (form indentation-level)
-  (format nil "elif ~a:"
-	  (ir-to-python (cadr form) indentation-level)))
-  
-(defun element-array-to-python (form indentation-level)
-  (format nil "~a[~a]"
-	  (ir-to-python (cadr form) indentation-level)
-	  (ir-to-python (clast form) indentation-level)))
-  
-(defun func-def-to-python (form indentation-level)
-  (format nil "def ~a(~{~a~^, ~}):~&~a"
-	  (ir-to-python (cadr form))
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level))
-	   (caddr form))
-	  (ir-to-python (clast form) indentation-level)))
-
-(defun struct-list-to-python (form indentation-level)
-  (format nil "[~{~a~^, ~}]"
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level))
-	   (cdr form))))
-
-(defun unary-op-to-python (form indentation-level)
-  (format nil "(~a~a)"
-	  (cadr form)
-	  (ir-to-python (caddr form) indentation-level)))
-
-(defun del-to-python (form indentation-level)
-  (format nil "del ~a"
-	  (ir-to-python (cadr form))))
-
-(defun funcall-to-python (form indentation-level)
-  (format nil "~a(~{~a~^, ~})"
-	  (ir-to-python (cadr form))
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level))
-	   (cddr form))))
-
-(defun string-to-python (form indentation-level)
-  (format nil "~c~a~c"
-	  #\"
-	  (cadr form)
-	  #\"))
-  
-(defun assign-to-python (form indentation-level)
-  (format nil "~a = ~a"
-	  (ir-to-python (cadr form))
-	  (ir-to-python (caddr form))))
-
-(defun asterisk-to-python (form indentation-level)
-  (format nil "*~a"
-	  (ir-to-python (cadr form))))
-
-(defun symbol-to-python (form indentation-level)
-  (cadr form))
-
-(defun op-no-bracket-template (op)
-  (format nil "~@?" "~~{~~#[~~;~~a~~:;~~a ~a ~~]~~}"
-	  op))
-
-(defun op-no-bracket-to-python (form indentation-level)
-  (format nil (op-no-bracket-template (ir-to-python (cadr form)))
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level))
-	   (cddr form))))
-
-(defun op-template (op)
-  (format nil "~@?" "(~~{~~#[~~;~~a~~:;~~a ~a ~~]~~})"
-	  op))
-
-(defun op-to-python (form indentation-level)
-  (format nil (op-template (ir-to-python (cadr form)))
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level))
-	   (cddr form))))
-
-;; "~{~&~a~}" but there was a problem regarding this with indentation:
-;; pytranslate('(while cond do (while cond do (while cond do expr))));
-;; (%o2) None = None
-;; while not(not(cond)):
-;;         None = None
-;;     while not(not(cond)):
-;;                 None = None
-;;         while not(not(cond)):
-;;             expr
-;;             None = (None + None)
-;;         del None
-;;         None = (None + None)
-;;     del None
-;;     None = (None + None)
-;; del None
-;; The lines None=None arent properly indented
-;; Hence change to ~% for new line
-(defun body-to-python (form indentation-level)
-  (format nil "~{~%~a~}"
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm indentation-level t))
-	   (cdr form))))
-
-(defun body-indented-to-python (form indentation-level)
-  (format nil "~{~&~a~}"
-	  (mapcar
-	   (lambda (elm) (ir-to-python elm (1+ indentation-level) t))
-	   (cdr form))))
-
-(defun num-to-python (form indentation-level)
-  (cond ((eql 0 (clast form)) (ir-to-python (cadr form)))
-	(t "1j")))
-
-;;; Function to display the internal Maxima form
-(defun $show_form (form)
-  (print (nformat-check form))) 

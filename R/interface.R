@@ -5,12 +5,19 @@ MReader <- R6::R6Class("MReader",
       private$rc <- con
       private$stash <- ""
       private$complete <- TRUE
+      private$Nnon <- 0L
     },
     wasComplete = function() {
       private$complete
     }
   ),
   active = list(
+    trials = function(value) {
+      if(missing(value)) 
+        private$Nnon
+      else 
+	private$Nnon <- value
+    },
     read = function(value) {
       if(!missing(value))
 	message("Input value ignored.")
@@ -23,11 +30,13 @@ MReader <- R6::R6Class("MReader",
       warning = function(cnd) {
 	private$complete <- FALSE 
       }))
-      if(private$complete && length(x)) 
+      if(private$complete && length(x)) {
 	private$stash <- ""
-      else {
+        private$Nnon <- 0L
+      } else {
 	private$stash <- z
 	private$complete <- FALSE
+	private$Nnon <- private$Nnon + 1L
       }
 
       return(z)
@@ -36,7 +45,8 @@ MReader <- R6::R6Class("MReader",
   private = list(
     stash = character(0),
     complete = logical(0),
-    rc = NULL
+    rc = NULL,
+    Nnon = integer(0)
   )
 )
 
@@ -45,11 +55,13 @@ Reply <- R6::R6Class("Reply",
     initialize = function(con) {
       if(missing(con)) 
 	stop("Please provide a connection object to initialize.") 
+
       if(!(isOpen(con, rw = "read") && isOpen(con, rw = "write"))) 
 	stop("Connection without read/write access")
       
       # read socket until including prompt 
       promptExpr <- "<<prompt;"
+      promptDefault <- "^\\(%i\\d+\\) $"
       promptHit <- FALSE
       rdr <- MReader$new(con)
       repeat { 
@@ -58,7 +70,8 @@ Reply <- R6::R6Class("Reply",
 	  if(grepl(pattern = promptExpr, x = z)) {
 	    promptHit <- TRUE
 	    break
-	  }
+	  } else if(grepl(pattern = promptDefault, x = z))
+		  stop("Detected default prompt - failed to initialize Maxima.")
 	  if(rdr$wasComplete())
 	    break
 	}
@@ -251,6 +264,9 @@ RMaxima <- R6::R6Class("RMaxima",
 				 replacement = "Z:", 
 				 x = private$utilsDir, 
 				 ignore.case = TRUE)
+
+	if(.Platform$OS.type == "windows")
+		private$utilsDir <- paste0("\"", private$utilsDir, "\"")
       }
       else
 	private$utilsDir <- utilsDir
@@ -469,28 +485,43 @@ RMaxima <- R6::R6Class("RMaxima",
       if(grepl("\\$$", command))
 	private$reply$suppressed <- TRUE
     },
-    parseStartUp = function() {
+    parseStartUp = function(nmax = as.integer(1e6)) {
       # pid
       pidExpr <- "pid=(\\d+)"
+      rdr <- MReader$new(private$maximaSocket)
       repeat {
-	z <- readLines(private$maximaSocket, n = 1, warn = FALSE)
+	# z <- readLines(private$maximaSocket, n = 1, warn = FALSE)
+	z <- rdr$read
 	if(length(z)) {
 	  if(grepl(pattern = pidExpr, x = z)) { 
 	    private$pid <- as.integer(regex(text = z, pattern = pidExpr)[2])
 	    break
 	  }
 	}
+	if(rdr$trials > nmax)
+	  stop("Failed to read process ID - couldn't start Maxima.")
       }
 
       # version
+      rdr$trials <- 0L
       verExpr <- "Maxima ((\\d+\\.)?(\\d+\\.)?(\\d+))"
       repeat {
-	z <- readLines(private$maximaSocket, n = 1, warn = FALSE)
+	# z <- readLines(private$maximaSocket, n = 1, warn = FALSE)
+	z <- rdr$read
 	if(length(z)) {
 	  if(grepl(pattern = verExpr, x = z)) { 
 	    private$version <- numeric_version(regex(text = z, pattern = verExpr)[2])
 	    break
 	  }
+	}
+	if(rdr$trials > nmax) {
+		stop("Failed to read version number - Maxima seems stuck.\n", 
+		     "Has read: ", z, "\n", 
+		     "Maxima call: ", paste0(private$maximaPath, 
+					     " -s ", private$port, 
+					     " --userdir=", private$utilsDir, 
+					     " --init=", private$display, 
+					     " ",  private$preload))
 	}
       }
     }

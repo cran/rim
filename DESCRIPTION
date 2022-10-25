@@ -1,8 +1,8 @@
 Package: rim
 Type: Package
 Title: R's Interface to Maxima, Bringing Symbolic Computation into R
-Version: 0.5.1
-Date: 2022-05-06
+Version: 0.5.2
+Date: 2022-10-25
 Authors@R: c(
     person("Eric", "Stemmler", email = "stemmler.eric@gmail.com", role = c("aut", "cre")),
     person("Kseniia", "Shumelchyk", email = "shumelchyk@gmail.com", role = c("aut")),
@@ -14,19 +14,19 @@ Description: Provides an interface to the powerful and fairly complete computer 
 URL: https://rcst.github.io/rim/
 BugReports: https://github.com/rcst/rim/issues
 SystemRequirements: Maxima (https://sourceforge.net/projects/maxima/,
-        tested with versions >=5.42.1), needs to be on PATH
+        tested with versions 5.42.0 - 5.45.1), needs to be on PATH
 License: GPL (>= 3)
 Imports: methods, Rcpp, R6, knitr, GlobalOptions
 LinkingTo: Rcpp
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Suggests: testthat (>= 3.0.0), digest, rmarkdown, OpenImageR
 Config/testthat/edition: 3
 Encoding: UTF-8
 NeedsCompilation: yes
-Packaged: 2022-05-06 10:17:59 UTC; eric
+Packaged: 2022-10-25 16:39:30 UTC; eric
 Author: Eric Stemmler [aut, cre],
   Kseniia Shumelchyk [aut],
   Hans W. Borchers [aut]
 Maintainer: Eric Stemmler <stemmler.eric@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-05-06 10:30:02 UTC
+Date/Publication: 2022-10-25 17:12:36 UTC
