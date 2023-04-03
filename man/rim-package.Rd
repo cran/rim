@@ -13,6 +13,7 @@
 \alias{maxima.isInstalled}
 \alias{iprint}
 \alias{print.maxima}
+\alias{maxima.eval}
 \title{rim}
 \usage{
 maxima.start(restart = FALSE)
@@ -32,6 +33,8 @@ maxima.isInstalled()
 iprint(x)
 
 \method{print}{maxima}(x, ...)
+
+maxima.eval(x, code = FALSE, envir = globalenv())
 }
 \arguments{
 \item{restart}{if FALSE (default), then Maxima is started provided it is not running already. If TRUE starts or restarts Maxima.}
@@ -42,14 +45,20 @@ iprint(x)
 
 \item{keystring}{character vector containing a search term.}
 
-\item{x}{S3 object of class "maxima"}
+\item{x}{Either a character vector of length 1L or an S3 object of class "maxima"}
 
 \item{...}{other arguments (ignored).}
+
+\item{code}{A logical vector of length 1L, whether to attach the original expression (TRUE) or not (FALSE, default)}
+
+\item{envir}{A environment object. \code{globalenv()} (default), is passed to eval().}
 }
 \value{
 invisibly returns NULL.
 
 Character vector of length 1 of the input command. Depending on whether option "label" is set to TRUE, the corresponding input reference label is printed preceding the input command.
+
+The evaluated R-object
 }
 \description{
 Provides an interface to Maxima, a computer algebra system.
@@ -57,7 +66,7 @@ Provides an interface to Maxima, a computer algebra system.
 \details{
 Note: You need to install the Maxima software separately in order to make use of this package. 
 
-Maxima is set up automatically on attachment via \code{library(rim)} and automatically started when a command is send (if it isn't running already) using \code{\link{maxima.get}()}. Using \code{\link{maxima.start}()} and \code{\link{maxima.stop}()}, one can stop and (re-)start the current Maxima session if needed, e.g. to clear Maxima command and output history.
+Maxima is set up automatically on attachment via \code{library(rim)} and automatically started when a command is send (if it isn't running already) using \code{\link{maxima.get}()}. If environment variable RIM_MAXIMA_PATH is not set, rim will search for the Maxima executable, or use the former otherwise. Using \code{\link{maxima.start}()} and \code{\link{maxima.stop}()}, one can stop and (re-)start the current Maxima session if needed, e.g. to clear Maxima command and output history.
 
 To send a single command to Maxima and receive the corresponding output use \code{\link{maxima.get}()}. This function returns a S3 object of class "maxima". The output is printed by printing the object and will be printed in a format currently set by \code{\link{maxima.options}(format)}. The output format can be changed by setting it, e.g. \code{\link{maxima.options}(format = "ascii")}. Output labels are printed according to option \code{\link{maxima.options}(label)}.
 }
@@ -80,6 +89,8 @@ To send a single command to Maxima and receive the corresponding output use \cod
 \item \code{iprint()}: Prints the input command of an maxima S3-object returned by \code{\link{maxima.get}()}
 
 \item \code{print(maxima)}: Prints the maxima output part of an S3 object returned by \code{\link{maxima.get}()}
+
+\item \code{maxima.eval()}: Evaluates the parsed and quoted R-expression which is part of an S3 object returned by \code{\link{maxima.get}()}
 
 }}
 \seealso{

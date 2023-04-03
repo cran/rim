@@ -225,7 +225,8 @@ Reply <- R6::R6Class("Reply",
 				 "ascii" = extract("two;>>|<<two;", wol),
 				 "latex" = extract("tex;>>|<<tex;", wol),
 				 "inline" = extract("tin;>>|<<tin;", wol),
-				 "mathml" = extract("htm;>>|<<htm;", wol))))
+				 "mathml" = extract("htm;>>|<<htm;", wol),
+				 "rstr" = extract("m2r;>>|<<m2r;", wol))))
       }
     })
 )
@@ -239,10 +240,12 @@ RMaxima <- R6::R6Class("RMaxima",
 			  preload,
 			  port = 27182) {
 
-      if(missing(maximaPath))
-	private$maximaPath <- Sys.which("maxima")
+      if(missing(maximaPath)) {
+        if(is.na(private$maximaPath <- Sys.getenv("RIM_MAXIMA_PATH", unset = NA)))
+	  private$maximaPath <- Sys.which("maxima")
+      }
       else
-	private$maximaPath <- maximaPath
+        private$maximaPath <- maximaPath
 
       if(missing(workDir))
 	private$workDir = getwd()
@@ -289,9 +292,9 @@ RMaxima <- R6::R6Class("RMaxima",
     },
     isInstalled = function() {
       if(!nchar(private$maximaPath) || 
-	 !grep(pattern = "maxima", 
-	       x = private$maximaPath, 
-	       ignore.case = TRUE))
+	 length(grep(pattern = "maxima", 
+		     x = private$maximaPath, 
+		     ignore.case = TRUE)) == 0L)
 	return(FALSE)
       else
 	return(TRUE)
@@ -362,6 +365,7 @@ RMaxima <- R6::R6Class("RMaxima",
 			 output.label = private$lastOutputLabel,
 			 command = command,
 			 suppressed = private$reply$suppressed,
+			 parsed = NA,
 			 class = "maxima"))
       }
 
@@ -373,11 +377,30 @@ RMaxima <- R6::R6Class("RMaxima",
       # validate output and return if valid
       if(!is.na(private$reply$getOutputLabel())) {
 	private$lastOutputLabel <- private$reply$getOutputLabel()
+
+      if(grepl("no-convert", p <- private$reply$result$wol$rstr)) {
+	      warning("Couldn't parse non-suppressed Maxima output.",
+		      "\nIf you think it should be parsed, please submit an issue at",
+		      "\nhttps://github.com/rcst/rim/issues\n", p)
+	      p <- NA_character_
+      }
+
+      tryCatch(
+	       error = function(cnd) {
+		       warning("Caught error while parsing\n",
+			       cnd$message, 
+			       "\nReturning NA.")
+		       p <- NA
+	       },
+	       p <- str2lang(p)
+      )
+
 	return(structure(private$reply$result,
 			 input.label = private$lastInputLabel,
 			 output.label = private$lastOutputLabel,
 			 command = command,
 			 suppressed = private$reply$suppressed,
+			 parsed =  p,
 			 class = "maxima"))
       }
 
@@ -400,7 +423,7 @@ RMaxima <- R6::R6Class("RMaxima",
     get_stuck = function(command) {
       # executes command without advancing reference labels
       if(length(command) && nchar(command))
-	self$get(paste0("(", command, "linenum:linenum-1, %)$"))
+	self$get(paste0("(", command, ", linenum:linenum-1, %)$"))
     },
     getPort = function() {
       if(private$running) 
