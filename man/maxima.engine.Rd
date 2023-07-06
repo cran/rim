@@ -32,3 +32,9 @@ The purpose of \code{maxima.inline} is to insert Maxima results as inline text, 
 \item \code{maxima.inline()}: This function can be used to insert maxima outputs as inline.
 
 }}
+\examples{
+if(maxima.isInstalled()) {
+  maxima.inline("2+2;")
+  maxima.stop(engine = TRUE)
+}
+}

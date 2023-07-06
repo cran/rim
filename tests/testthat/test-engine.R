@@ -8,10 +8,12 @@ test_that("maxima knitr engine works", {
 		    package = "rim", mustWork = TRUE)
   fo <- paste0(dirname(fr[1]), "/test.md")
 
-  hash <- digest::digest(readLines(con = fr[2]), "sha256")
+  result <- readLines(con = fr[2])
   suppressWarnings(knit(input = fr[1], output = fo, quiet = TRUE))
+  test <- readLines(con = fo)
 
-  expect_match(digest::digest(readLines(fo), "sha256"), hash)
+  # expect_match(digest::digest(readLines(fo), "sha256"), hash)
+  expect_equal(object = test, expected = result)
 
   # clean up
   file.remove(fo)

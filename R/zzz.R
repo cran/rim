@@ -7,16 +7,17 @@
     maxima.start() 
     if(maxima.version() < "5.42.1") {
       packageStartupMessage(paste("Installed Maxima version ", maxima.version(), 
-				  "is untested. Consider updating.")) 
+                                  "is untested. Consider updating.")) 
     }
+    maxima.stop()
   }
   else {
     packageStartupMessage(paste("Could not find Maxima executable, please download from\n", 
-			  "https://maxima.sourceforge.io/download.html\n",
-			  "and install"))
+                                "https://maxima.sourceforge.io/download.html\n",
+                                "and install"))
     if(.Platform$OS != "unix") 
       packageStartupMessage(paste("Please make sure maxima executable", 
-				  "is on PATH environment variable."))
+                                  "is on PATH environment variable."))
   }
 
   if(requireNamespace("knitr", quietly = TRUE)) {
@@ -28,10 +29,18 @@
 }
 
 .onUnload <- function (libpath) { 
-  library.dynam.unload("rim", libpath)
-  rm("maxima", envir = maxima.env)
+  suppressMessages({
+    library.dynam.unload("rim", libpath)
+    rm(list = "maxima", envir = maxima.env)
+    if(exists(x = "mx", envir = maxima.env))
+      rm(list = "mx", envir = maxima.env)
+  })
 }
 
 .onDetach <- function(libpath) {
-  maxima.env$maxima.stop()
+  suppressMessages({
+    maxima.env$maxima$stop()
+    if(exists(x = "mx", envir = maxima.env))
+      maxima.env$mx$stop()
+  })
 }

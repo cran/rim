@@ -18,7 +18,7 @@
 \usage{
 maxima.start(restart = FALSE)
 
-maxima.stop()
+maxima.stop(engine = FALSE)
 
 maxima.get(command)
 
@@ -38,6 +38,8 @@ maxima.eval(x, code = FALSE, envir = globalenv())
 }
 \arguments{
 \item{restart}{if FALSE (default), then Maxima is started provided it is not running already. If TRUE starts or restarts Maxima.}
+
+\item{engine}{if FALSE (default), quits the (running) maxima instance and closes the connection, otherwise quits and closes the (running) maxima instance used for the knitr engine.}
 
 \item{command}{character string containing the Maxima command.}
 
@@ -93,6 +95,36 @@ To send a single command to Maxima and receive the corresponding output use \cod
 \item \code{maxima.eval()}: Evaluates the parsed and quoted R-expression which is part of an S3 object returned by \code{\link{maxima.get}()}
 
 }}
+\examples{
+if(maxima.isInstalled()) maxima.start(restart = TRUE)
+if(maxima.isInstalled()) {
+  maxima.start(restart = TRUE)
+  maxima.stop()
+}
+if(maxima.isInstalled()) maxima.get("2+2;")
+if(maxima.isInstalled()) maxima.load("abs_integrate")
+if(maxima.isInstalled()) maxima.apropos("integrate")
+maxima.version()
+maxima.isInstalled()
+if(maxima.isInstalled()) {
+  a <- maxima.get("2+2;")
+  iprint(a)
+}
+if(maxima.isInstalled()) {
+  a <- maxima.get("2+2;")
+  print(a)
+}
+if(maxima.isInstalled()) {
+  a <- maxima.get("2+2;")
+  maxima.eval(a)
+  # same
+  maxima.eval("2+2;")
+  # evaluate with data.frame
+  df <- data.frame(x = seq(0, 1, by = 0.1))
+  maxima.eval("integrate(1 / (1 + x^4), x);", code = TRUE, envir = df)
+  maxima.stop()
+}
+}
 \seealso{
 Useful links:
 \itemize{
