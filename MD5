@@ -1,8 +1,8 @@
-702e3bb001372ea918efadb9915baa50 *DESCRIPTION
+d12ba3e902ec770931dfd860240947ef *DESCRIPTION
 11c4d188f26412470e494d12803b6366 *NAMESPACE
-e0e4d523d0749f254ac43a2020a4f342 *NEWS.md
+7386cc83fdf9230bad27334caf6a7558 *NEWS.md
 c3801074aa7c6e01fae2213a01df60fd *R/RcppExports.R
-eadf9af49fdb1b3a98907aa5235f9e72 *R/engine.R
+39ea88a3f9ca93e18eaf006af6682972 *R/engine.R
 8c3b59a510ca6e0acdc76e23686b9689 *R/engine.utils.R
 8873ee59d0492d85ef2272c011ab0885 *R/hooks.R
 9a719075fcbe74012d4438d4c6596b77 *R/interface.R
@@ -11,7 +11,7 @@ eadf9af49fdb1b3a98907aa5235f9e72 *R/engine.R
 bac0822e18ff1168c0833bfb09ac4539 *R/zzz.R
 0b3fa165a5e2b42ddef5c50fb2be78c5 *README.md
 4f218b70cfb36f5e9f43c1fd70cd3e98 *inst/extdata/display.lisp
-fe9ade014e7981cde5f0c49e3887cd22 *inst/extdata/display.mac
+937e7dba1cdcf0d395612c2dbd9d281e *inst/extdata/display.mac
 18c7714db1b29d3b5ea1fbb05d5049d2 *inst/extdata/draw-ref.png
 d03d4b458a6a8d6a8c798e9292fd949f *inst/extdata/draw2d-ref.png
 9f6a75f5107b9dc360a4f184f6e5f2c1 *inst/extdata/draw3d-ref.png
@@ -21,8 +21,8 @@ d03d4b458a6a8d6a8c798e9292fd949f *inst/extdata/draw2d-ref.png
 9a300282149fc1ef9689d39f81cc3f6e *inst/extdata/maxima-init-tex.mac
 3eb906818f0521883be6d06dd1ada007 *inst/extdata/maxima-init.mac
 b66dbeb37ca239766d25a5e594d3ff05 *inst/extdata/parser.lisp
-e496cece6b9b7200b36aadb5e796606a *inst/extdata/plot-knitr-pdf.lisp
-2b28eafd76f7908d40184a0ddc447828 *inst/extdata/plot-knitr-png.lisp
+8d3c5e572674b48ebcb34fb7a9e5d06f *inst/extdata/plot-knitr-pdf.lisp
+eca61520957706ef9549d1940dab271e *inst/extdata/plot-knitr-png.lisp
 bdff6cf5a4e8cf70b1f972788b72f552 *inst/extdata/plot2d-ref.png
 bb3d360196d8356d1f66c6084c7cad74 *inst/extdata/plot3d-ref.png
 4ac7280f7a744c157f4587679223e192 *inst/extdata/rds.lisp
@@ -39,7 +39,7 @@ c98dd785ec27181a10d6ea5f45f6113d *src/utils.cpp
 ae07ed49d180fa89769645097af9a9d5 *tests/testthat.R
 ab1b4fe4c7ccc3afff06430b801a7dca *tests/testthat/test-apropos.R
 b8951807901d3e049736a0a9e43234b1 *tests/testthat/test-ask-user.R
-2c73432dd26605cb2a1f3df324f3a06e *tests/testthat/test-engine.R
+f374b47878d9a7f4ec0fe2a5b7bac8c7 *tests/testthat/test-engine.R
 2e71a9f586523b75880ab114ba527575 *tests/testthat/test-errors.R
 2ce8a45029d3d92192c8f1d5373ee19c *tests/testthat/test-execute.R
 c490171bdb2d533837cbeaed39b16982 *tests/testthat/test-parser.R
