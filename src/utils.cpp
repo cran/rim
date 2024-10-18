@@ -1,163 +1,258 @@
 #include<Rcpp.h>
 #include<string>
+#include<vector>
 
-enum Input
-{
-    IN_TERMINATOR,
-    IN_BACKSLASH,
-    IN_QUOTEMARK,
-    IN_OTHER
-};
+using namespace Rcpp;
 
-const int STATE_END = -1;
-
-// trim a std::string
-// trim from start (in place)
-// void ltrim(std::string &s) {
-//     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-//         return !std::isspace(ch);
-//     }));
-// }
 std::string ltrim(std::string s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
         return !std::isspace(ch);
-    }));
+        }));
 
-    return s;
+  return s;
 }
 
-// trim from end (in place)
-// void rtrim(std::string &s) {
-//     s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-//         return !std::isspace(ch);
-//     }).base(), s.end());
-// }
 std::string rtrim(std::string s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+  s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
         return !std::isspace(ch);
-    }).base(), s.end());
+        }).base(), s.end());
 
-    return s;
+  return s;
 }
-
-// trim from both ends (in place)
-// void trim(std::string s) {
-//     ltrim(s);
-//     rtrim(s);
-// }
 
 // [[Rcpp::export]]
 std::string trim(std::string s) {
-    return rtrim(ltrim(s));
+  return rtrim(ltrim(s));
 }
 
-// trim from start (copying)
-// std::string ltrim_copy(std::string s) {
-//     ltrim(s);
-//     return s;
-// }
-// 
-// // trim from end (copying)
-// std::string rtrim_copy(std::string s) {
-//     rtrim(s);
-//     return s;
-// }
-// 
-// // trim from both ends (copying)
-// // [[Rcpp::export]]
-// std::string trim_copy(std::string s) {
-//     trim(s);
-//     return s;
-// }
+const int STATE_END = -1;
 
-int checkInput(char c, int state)
-{
-    
-    // 0: backslash->1, terminator->end, quot_mark->2, other->0
-    // 1: any->0
-    // 2: backslash->3, terminator->2, quot_mark->0, other->2
-    // 3: any->2
-    // end:
-    
-    Input in = IN_OTHER;
-    if (c == ';' || c == '$')
-    {
-        in = IN_TERMINATOR;
-    }
-    else if (c == '\\')
-    {
-        in = IN_BACKSLASH;
-    }
-    else if (c == '"')
-    {
-        in = IN_QUOTEMARK;
-    }
+enum Input {
+  IN_TERMINATOR,
+  IN_BACKSLASH,
+  IN_QUOTEMARK,
+  IN_SLASH,
+  IN_ASTERIX,
+  IN_COMMENT_ASTERIX,
+  IN_COMMENT_START,
+  IN_COMMENT,
+  IN_COMMENT_END,
+  IN_OTHER
+};
 
-    switch (state)
-    {
-    case 0:
-        switch (in)
-        {
+int checkInput(char c, int state, int comment_count) {
+
+  Input in = IN_OTHER;
+  if (c == ';' || c == '$') {
+    in = IN_TERMINATOR;
+  } else if (c == '\\') {
+    in = IN_BACKSLASH;
+  } else if (c == '"') {
+    in = IN_QUOTEMARK;
+  } else if (c == '*') {
+    in = IN_ASTERIX;
+  } else if (c == '/') {
+    in = IN_SLASH;
+  }
+
+  switch (state) {
+    case IN_TERMINATOR: // IN_TERMINATOR
+      switch (in) {
         case IN_BACKSLASH:
-            return 1;
+          return IN_BACKSLASH;
         case IN_TERMINATOR:
+          return STATE_END;
+        case IN_QUOTEMARK:
+          return IN_QUOTEMARK;
+        case IN_SLASH:
+          return IN_SLASH;
+        default:
+          return IN_TERMINATOR;
+      }
+
+    case IN_BACKSLASH:
+      return IN_TERMINATOR;
+    case IN_QUOTEMARK:
+      switch (in) {
+        case IN_BACKSLASH:
+          return IN_OTHER;
+        case IN_QUOTEMARK:
+          return IN_TERMINATOR;
+        default:
+          return IN_QUOTEMARK;
+      }
+
+    case IN_SLASH:
+      switch (in) {
+        case IN_ASTERIX:
+          return IN_COMMENT_START;
+        case IN_TERMINATOR:
+          return STATE_END;
+        default:
+          return IN_TERMINATOR;
+      }
+
+    case IN_COMMENT:
+      switch (in) {
+        case IN_SLASH:
+          return IN_SLASH;
+        case IN_ASTERIX:
+          return IN_COMMENT_ASTERIX;
+        default: 
+          return IN_COMMENT;
+      }
+
+    case IN_COMMENT_START:
+      switch (in) {
+        case IN_ASTERIX:
+          return IN_COMMENT_ASTERIX;
+        default:
+          return IN_COMMENT;
+      }
+
+    case IN_COMMENT_ASTERIX:
+      switch (in) {
+        case IN_SLASH:
+          return IN_COMMENT_END;
+        default:
+          return IN_COMMENT;
+      }
+
+    case IN_COMMENT_END:
+      if (comment_count == 0) {
+        switch (in) {
+          case IN_TERMINATOR:
             return STATE_END;
-        case IN_QUOTEMARK:
-            return 2;
-        default:
-            return 0;
+          case IN_BACKSLASH:
+            return IN_BACKSLASH;
+          case IN_QUOTEMARK:
+            return IN_QUOTEMARK;
+          case IN_SLASH:
+            return IN_SLASH;
+          default:
+            return IN_TERMINATOR;
+        } 
+      } else {
+        switch (in) {
+          case IN_SLASH:
+            return IN_SLASH;
+          case IN_ASTERIX:
+            return IN_COMMENT_ASTERIX;
+          default:
+            return IN_COMMENT;
         }
-    case 1:
-        return 0;
-    case 2:
-        switch (in)
-        {
+      }
+
+    case IN_OTHER:
+      return IN_QUOTEMARK;
+
+    case STATE_END:
+      switch (in) {
         case IN_BACKSLASH:
-            return 3;
+          return IN_BACKSLASH;
         case IN_TERMINATOR:
-            return 2;
+          return STATE_END;
         case IN_QUOTEMARK:
-            return 0;
+          return IN_QUOTEMARK;
+        case IN_SLASH:
+          return IN_SLASH;
         default:
-            return 2;
-        }
-    case 3:
-        return 2;
-    }
-    return state;
+          return IN_TERMINATOR;
+      }
+  }
+  return state;
 }
 
 // [[Rcpp::export]]
-std::string checkCommand(std::string command)
-{ 
-	// remove leading and trailing spaces from command 
-	// alg::trim(command); 
-	trim(command);
-	int state = 0; 
-	
-	// this loop solely checks whether the command issued terminates correctly 
-	for (size_t i = 0; i < command.size(); ++i) 
-	{
-		// get check ith character from string:
-		// if a termination character (; or $) 
-		// occures at position next-to-last it is concluded
-		// that there are two termination characters and an exception gets thrown
-		// cause a command is obliged to END with a termination character
-		state = checkInput(command[i], state);
-		if (state == STATE_END && (i + 1) != command.size())
-		{
-		// throw std::runtime_error("Bad expression: "
-		// "only one ;|$ terminated expression at a time is allowed");
-		Rcpp::stop("Bad expression: "
-				"only one ;|$ termination expression at a time is allowed");
-		} 
-	}
+std::string checkCommand(std::string command) { 
+  trim(command);
+  int state = 0; 
+  int comment_count = 0;
+  bool terminated = false;
+  std::vector<size_t> csp, cep;
 
-    //if there is no termination character at all add ";"
-    if (state != STATE_END)
-    {
-        command += ";";
+  for (size_t i = 0; i < command.size(); ++i) {
+    state = checkInput(command[i], state, comment_count);
+
+    if (state == IN_COMMENT_START) {
+      if (comment_count == 0)
+        csp.push_back(i-1);
+
+      comment_count++;
+    }
+    else if (state == IN_COMMENT_END) {
+      comment_count--;
+      if(comment_count == 0)
+        cep.push_back(i);
     }
 
-    return command;
+    if (state == STATE_END && terminated == true) {
+      Rcpp::stop("Bad expression: only one ;|$ terminated expression at a time is allowed");
+    } 
+
+    if (state == STATE_END) {
+      terminated = true;
+    }
+  }
+
+  if(csp.size() != cep.size()) {
+    stop("Bad expression: Found Non-ending comment");
+  }
+
+  for (int i = csp.size() - 1;  i >= 0; --i) {
+    command.erase(csp.at(i), cep.at(i) - csp.at(i) + 1);
+  }
+
+  if (!terminated) {
+    command += ";";
+  }
+
+  return command;
+}
+
+// [[Rcpp::export]]
+Rcpp::List dissect_chunk(std::vector<std::string> code) {
+  int state = 0; 
+  int comment_count = 0;
+  bool terminated = false;
+  std::vector<size_t> csp, cep;
+  List L =List::create();
+  IntegerVector temp = IntegerVector::create();
+
+  for (size_t i = 0; i < code.size(); ++i) {
+    code[i] = trim(code[i]);
+    // code(i) = trim(code[i]);
+    for (size_t j = 0; j < code[i].size(); ++j) {
+      state = checkInput(code[i][j], state, comment_count);
+
+      if (state == IN_COMMENT_START) {
+        if (comment_count == 0)
+          csp.push_back(i-1);
+
+        comment_count++;
+      }
+      else if (state == IN_COMMENT_END) {
+        comment_count--;
+        if(comment_count == 0)
+          cep.push_back(i);
+      }
+
+      if(state == STATE_END) {
+        terminated = true;
+      }
+    }
+    
+    // skip empty lines
+    if(code[i].size() > 0) {
+      temp.push_back(i+1);
+      if(terminated == true) {
+        terminated = false;
+        L.push_back(temp);
+        temp.erase(0, temp.size());
+      }
+    }
+
+  }
+
+  return L;
 }

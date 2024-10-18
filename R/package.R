@@ -13,6 +13,7 @@
 #' @import methods
 ## usethis namespace: start
 #' @importFrom Rcpp sourceCpp
+#' @importFrom utils tail
 #' @useDynLib rim, .registration = TRUE
 ## usethis namespace: start
 #'
@@ -106,21 +107,18 @@ maxima.isInstalled <- function() {
 #' }
 iprint <- function(x) {
   stopifnot(isa(x, what = "maxima"))
-  # cll <- deparse(sys.call())
-  # cll <- deparse(sys.calls()[[sys.parent()]])
+
+  # TODO: Determin calling function to distinguish return value
+  label <- character(0)
   if(exists("mx", maxima.env)) {
-  # if(grepl("^engine\\(options\\)$", cll)) {
     if(maxima.options$engine.label) 
-      paste0("(", attr(x, "input.label"), ") ", attr(x, "command"))
-    else
-      paste0(attr(x, "command"))
+      label <- paste0("(", attr(x, "input.label"), ") ")
+  } else {
+    if(maxima.options$label)
+      label <- paste0("(", attr(x, "input.label"), ") ")
   }
-  else {
-    if(maxima.options$label) 
-      paste0("(", attr(x, "input.label"), ") ", attr(x, "command"))
-    else
-      paste0(attr(x, "command"))
-  }
+
+  paste0(label, attr(x, "command"))
 }
 
 #' @describeIn rim-package Prints the maxima output part of an S3 object returned by \code{\link{maxima.get}()} 
@@ -135,16 +133,25 @@ iprint <- function(x) {
 #' }
 print.maxima <- function(x, ...) {
   if(!attr(x, "suppressed")) {
-    switch(maxima.options$label + 1,
-	   {
-	     cat(paste0(c(x[["wol"]][[maxima.options$format]], ""), collapse = "\n"))
-	     invisible(paste0(c(x[["wol"]][[maxima.options$format]], ""), collapse = "\n"))
-	   },
-	   {
-	     cat(paste0(c(x[["wtl"]][[maxima.options$format]], ""), collapse = "\n"))
-	     invisible(paste0(c(x[["wol"]][[maxima.options$format]], ""), collapse = "\n"))
-	   }
-    )
+    if(attr(x, "from_engine") & !is_interactive()) {
+      label_opt <- maxima.options$engine.label
+      format_opt <- maxima.options$engine.format
+    } else {
+      label_opt <- maxima.options$label
+      format_opt <- maxima.options$format
+    }
+
+    label_opt <- ifelse(label_opt, "wtl", "wol")
+
+    txt <- x[[label_opt]][[format_opt]]
+
+    if(is_html_output()) {
+      txt <- gsub(pattern = "\\\\%", replacement = "%", x = txt)
+    }
+
+    if(!(attr(x, "from_engine") | is_interactive())) 
+      cat(txt)
+    invisible(txt)
   }
 }
 

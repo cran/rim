@@ -359,7 +359,8 @@ pre code {
 </div>
 
 
-<pre class="r"><code>maxima.options(engine.format = &quot;latex&quot;, 
+<pre class="r"><code>options(width = 80)
+maxima.options(engine.format = &quot;latex&quot;, 
            engine.label = TRUE,
            inline.format = &quot;inline&quot;, 
            inline.label = FALSE)</code></pre>
@@ -397,28 +398,56 @@ L=\sqrt{1-\frac{1}{R^2}}\]</span></p>
 ## ((1L/2L) * log((1L + (-1L * (R^-2L)))))</code></pre>
 <pre class="r"><code>eval(moo[[1]], list(R = 12))</code></pre>
 <pre><code>## [1] -0.003484335</code></pre>
+<pre class="maxima"><code>(%i12) /* aa is a variable of interest */  aa : 1234;</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{12})}\quad
+1234\]</span></p>
+<pre class="maxima"><code>(%i13) bb : aa^2; /* Value of bb depends on aa */ </code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{13})}\quad
+1522756\]</span></p>
+<pre class="maxima"><code>(%i14) /* User-defined infix operator */  infix (&quot;Q&quot;);</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{14})}\quad \mbox{
+Q }\]</span></p>
+<pre class="maxima"><code>(%i15) /* Parses same as a b c, not abc */  a/* foo */Q/* bar */c;</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{15})}\quad
+\textit{aQc}\]</span></p>
+<pre class="maxima"><code>(%i16) /* Comments /* can be nested /* to any depth */ */ */  1 + xyz;</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{16})}\quad
+\textit{xyz}+1\]</span></p>
+<pre class="maxima"><code>(%i17) load(fourier_elim)$
+(%i18) fourier_elim([x^2-1&gt;0], [x]);</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{18})}\quad \left[
+1&lt;x \right] \lor \left[ x&lt;-1 \right] \]</span></p>
+<pre class="r"><code># from previous chunk: output.var = &quot;boollist&quot;
+boollist</code></pre>
+<pre><code>## $o18
+## (((1L &lt; x)) | ((x &lt; -1L)))</code></pre>
+<pre class="r"><code>eval(boollist[[&quot;o18&quot;]], list(x = seq(-10, 10, 0.5)))</code></pre>
+<pre><code>##  [1]  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE
+## [13]  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE FALSE FALSE FALSE FALSE FALSE  TRUE
+## [25]  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE  TRUE
+## [37]  TRUE  TRUE  TRUE  TRUE  TRUE</code></pre>
 <div id="plots" class="section level1">
 <h1>Plots</h1>
-<pre class="maxima"><code>(%i12) r: (exp(cos(t))-2*cos(4*t)-sin(t/12)^5)$
-(%i13) plot2d([parametric, r*sin(t), r*cos(t), [t,-8*%pi,8*%pi]]);</code></pre>
-<pre class="maxima"><code>(%i14) plot3d(log (x^2*y^2), [x, -2, 2], [y, -2, 2],[grid, 29, 29],
+<pre class="maxima"><code>(%i19) r: (exp(cos(t))-2*cos(4*t)-sin(t/12)^5)$
+(%i20) plot2d([parametric, r*sin(t), r*cos(t), [t,-8*%pi,8*%pi]]);</code></pre>
+<pre class="maxima"><code>(%i21) plot3d(log (x^2*y^2), [x, -2, 2], [y, -2, 2],[grid, 29, 29],
        [palette, [gradient, red, orange, yellow, green]],
        color_bar, [xtics, 1], [ytics, 1], [ztics, 4],
        [color_bar_tics, 4]);</code></pre>
-<pre class="maxima"><code>(%i15) example1:
+<pre class="maxima"><code>(%i22) example1:
   gr3d (title          = &quot;Controlling color range&quot;,
         enhanced3d     = true,
         color          = green,
         cbrange        = [-3,10],
         explicit(x^2+y^2, x,-2,2,y,-2,2)) $
-(%i16) example2:
+(%i23) example2:
   gr3d (title          = &quot;Playing with tics in colorbox&quot;,
         enhanced3d     = true,
         color          = green,
         cbtics         = {[&quot;High&quot;,10],[&quot;Medium&quot;,05],[&quot;Low&quot;,0]},
         cbrange = [0, 10],
         explicit(x^2+y^2, x,-2,2,y,-2,2))$
-(%i17) example3:
+(%i24) example3:
   gr3d (title      = &quot;Logarithmic scale to colors&quot;,
         enhanced3d = true,
         color      = green,
@@ -426,28 +455,25 @@ L=\sqrt{1-\frac{1}{R^2}}\]</span></p>
         logz       = true,
         palette    = [-15,24,-9],
         explicit(exp(x^2-y^2), x,-2,2,y,-2,2))$
-(%i18) draw(
+(%i25) draw(
   dimensions = [500,1500],
   example1, example2, example3);</code></pre>
-<pre class="maxima"><code>(%i19) draw2d(
+<pre class="maxima"><code>(%i26) draw2d(
   dimensions = [1000, 1000],
   proportional_axes = xy,
   fill_color        = sea_green,
   color             = aquamarine,
   line_width        = 6,
   ellipse(7,6,2,3,0,360));</code></pre>
-<pre class="maxima"><code>(%i20) draw3d(
+<pre class="maxima"><code>(%i27) draw3d(
    dimensions = [1000, 1000],
    surface_hide      = true,
    axis_3d           = false,
    proportional_axes = xyz,
- 
    color             = blue,
    cylindrical(z,z,-2,2,a,0,2*%pi), 
- 
    color            = brown,
    cylindrical(3,z,-2,2,az,0,%pi),
- 
    color            = green,
    cylindrical(sqrt(25-z^2),z,-5,5,a,0,%pi));</code></pre>
 <pre class="r"><code>pft &lt;- list.files(pattern = &quot;(?:plot|draw)(2d|3d)?-[[:print:]]{6}\\.png&quot;, full.names = TRUE)
@@ -473,105 +499,71 @@ if(length(pft) == 5L)  {
 </div>
 <div id="normal-distribution" class="section level1">
 <h1>Normal Distribution</h1>
-<pre class="maxima"><code>(%i21) area(dist) := integrate(dist, x, minf, inf)$
-(%i22) mean(dist) := area(dist*x)$
-(%i23) EX2(dist) := area(dist*x^2)$
-(%i24) variance(dist) := EX2(dist) - mean(dist)^2$
-(%i25) mgf(dist) := area(dist*%e^(x*t))$</code></pre>
-<pre class="maxima"><code>(%i26) normal(x) := 
+<pre class="maxima"><code>(%i33) normal(x) := 
       (2*%pi*sigma^2)^(-1/2) * 
       exp(-(x-mu)^2/(2*sigma^2));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{26})}\quad
+<p><span class="math display">\[\mathtt{(\textit{%o}_{33})}\quad
 \textit{normal}\left(x\right):=\left(2\,\pi\,\sigma^2\right)^{\frac{-1}{2}}\,\exp
 \left(\frac{-\left(x-\mu\right)^2}{2\,\sigma^2}\right)\]</span></p>
-<pre class="maxima"><code>(%i27) assume(sigma &gt; 0)$
-(%i28) area(normal(x));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{28})}\quad
+<pre class="maxima"><code>(%i34) assume(sigma &gt; 0)$
+(%i35) area(normal(x));</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{35})}\quad
 1\]</span></p>
-<pre class="maxima"><code>(%i29) mean(normal(x));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{29})}\quad
+<pre class="maxima"><code>(%i36) mean(normal(x));</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{36})}\quad
 \mu\]</span></p>
-<pre class="maxima"><code>(%i30) variance(normal(x));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{30})}\quad
+<pre class="maxima"><code>(%i37) variance(normal(x));</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{37})}\quad
 \frac{2^{\frac{3}{2}}\,\sqrt{\pi}\,\sigma^3+2^{\frac{3}{2}}\,\sqrt{\pi}\,\mu^2\,\sigma}{2^{\frac{3}{2}}\,\sqrt{\pi}\,\sigma}-\mu^2\]</span></p>
-<pre class="maxima"><code>(%i31) mgf(normal(x));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{31})}\quad
-e^{\frac{\sigma^2\,t^2+2\,\mu\,t}{2}}\]</span></p>
-</div>
-<div id="laplace-distribution" class="section level1">
-<h1>Laplace Distribution</h1>
-<pre class="maxima"><code>(%i32) laplace(x) := (2*b)^-1 * exp(-abs(x - mu)/b);</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{32})}\quad
-\textit{laplace}\left(x\right):=\left(2\,b\right)^ {- 1 }\,\exp
-\left(\frac{-\left| x-\mu\right| }{b}\right)\]</span></p>
-<pre class="maxima"><code>(%i33) load(&quot;abs_integrate&quot;)$
-(%i34) assume(b &gt; 0)$
-(%i35) area(laplace(x))$
-(%i36) mean(laplace(x))$
-(%i37) variance(laplace(x))$</code></pre>
-</div>
-<div id="exponential-distribution" class="section level1">
-<h1>Exponential Distribution</h1>
-<pre class="maxima"><code>(%i38) expo(x) := unit_step(x) * lambda * exp(-lambda * x);</code></pre>
+<pre class="maxima"><code>(%i38) mgf(normal(x));</code></pre>
 <p><span class="math display">\[\mathtt{(\textit{%o}_{38})}\quad
-\textit{expo}\left(x\right):=\textit{unit\_step}\left(x\right)\,\lambda\,\exp
-\left(\left(-\lambda\right)\,x\right)\]</span></p>
-<pre class="maxima"><code>(%i39) assume(lambda &gt; 0)$
-(%i40) area(expo(x));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{40})}\quad
-1\]</span></p>
-<pre class="maxima"><code>(%i41) mean(expo(x));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{41})}\quad
-\frac{1}{\lambda}\]</span></p>
-<pre class="maxima"><code>(%i42) variance(expo(x));</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{42})}\quad
-\frac{1}{\lambda^2}\]</span></p>
+e^{\frac{\sigma^2\,t^2+2\,\mu\,t}{2}}\]</span></p>
 </div>
 <div id="matrices" class="section level1">
 <h1>Matrices</h1>
-<pre class="maxima"><code>(%i43) m: matrix([0, 1, a], [1, 0, 1], [1, 1, 0]);</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{43})}\quad
+<pre class="maxima"><code>(%i39) m: matrix([0, 1, a], [1, 0, 1], [1, 1, 0]);</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{39})}\quad
 \begin{pmatrix}0 &amp; 1 &amp; a \\ 1 &amp; 0 &amp; 1 \\ 1 &amp; 1 &amp;
 0 \\ \end{pmatrix}\]</span></p>
-<pre class="maxima"><code>(%i44) transpose(m);</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{44})}\quad
+<pre class="maxima"><code>(%i40) transpose(m);</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{40})}\quad
 \begin{pmatrix}0 &amp; 1 &amp; 1 \\ 1 &amp; 0 &amp; 1 \\ a &amp; 1 &amp;
 0 \\ \end{pmatrix}\]</span></p>
-<pre class="maxima"><code>(%i45) determinant(m);</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{45})}\quad
+<pre class="maxima"><code>(%i41) determinant(m);</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{41})}\quad
 a+1\]</span></p>
-<pre class="maxima"><code>(%i46) f: invert(m), detout;</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{46})}\quad
+<pre class="maxima"><code>(%i42) f: invert(m), detout;</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{42})}\quad
 \frac{\begin{pmatrix}-1 &amp; a &amp; 1 \\ 1 &amp; -a &amp; a \\ 1 &amp;
 1 &amp; -1 \\ \end{pmatrix}}{a+1}\]</span></p>
-<pre class="maxima"><code>(%i47) m . f;</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{47})}\quad
+<pre class="maxima"><code>(%i43) m . f;</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{43})}\quad
 \begin{pmatrix}0 &amp; 1 &amp; a \\ 1 &amp; 0 &amp; 1 \\ 1 &amp; 1 &amp;
 0 \\ \end{pmatrix}\cdot \left(\frac{\begin{pmatrix}-1 &amp; a &amp; 1 \\
 1 &amp; -a &amp; a \\ 1 &amp; 1 &amp; -1 \\
 \end{pmatrix}}{a+1}\right)\]</span></p>
-<pre class="maxima"><code>(%i48) expand(%);</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{48})}\quad
+<pre class="maxima"><code>(%i44) expand(%);</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{44})}\quad
 \begin{pmatrix}\frac{a}{a+1}+\frac{1}{a+1} &amp; 0 &amp; 0 \\ 0 &amp;
 \frac{a}{a+1}+\frac{1}{a+1} &amp; 0 \\ 0 &amp; 0 &amp;
 \frac{a}{a+1}+\frac{1}{a+1} \\ \end{pmatrix}\]</span></p>
-<pre class="maxima"><code>(%i49) factor(%);</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{49})}\quad
+<pre class="maxima"><code>(%i45) factor(%);</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{45})}\quad
 \begin{pmatrix}1 &amp; 0 &amp; 0 \\ 0 &amp; 1 &amp; 0 \\ 0 &amp; 0 &amp;
 1 \\ \end{pmatrix}\]</span></p>
 </div>
 <div id="if-then-else" class="section level1">
 <h1>If-then-else</h1>
-<pre class="maxima"><code>(%i50) x: 1234;</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{50})}\quad
+<pre class="maxima"><code>(%i46) x: 1234;</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{46})}\quad
 1234\]</span></p>
-<pre class="maxima"><code>(%i51) y: 2345;</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{51})}\quad
+<pre class="maxima"><code>(%i47) y: 2345;</code></pre>
+<p><span class="math display">\[\mathtt{(\textit{%o}_{47})}\quad
 2345\]</span></p>
-<pre class="maxima"><code>(%i52) if x &gt; y
+<pre class="maxima"><code>(%i48) if x &gt; y
   then x
   else y;</code></pre>
-<p><span class="math display">\[\mathtt{(\textit{%o}_{52})}\quad
+<p><span class="math display">\[\mathtt{(\textit{%o}_{48})}\quad
 2345\]</span></p>
 </div>
 
