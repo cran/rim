@@ -65,7 +65,7 @@ maxima.get <- function(command) {
 #' @return invisibly returns NULL.
 #' @export
 #' @examples
-#' if(maxima.isInstalled()) maxima.load("abs_integrate")
+#' if(maxima.isInstalled()) maxima.load("ratpow")
 maxima.load <- function(module) {
   maxima.env$maxima$loadModule(module) 
 }
@@ -149,8 +149,9 @@ print.maxima <- function(x, ...) {
       txt <- gsub(pattern = "\\\\%", replacement = "%", x = txt)
     }
 
-    if(!(attr(x, "from_engine") | is_interactive())) 
-      cat(txt)
+    # if(!(attr(x, "from_engine") | is_interactive())) 
+    if(is_interactive())
+      cat(txt, sep = '\n')
     invisible(txt)
   }
 }

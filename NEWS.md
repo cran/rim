@@ -1,3 +1,15 @@
+# rim 0.8.0
+## Modifications
+- fixed NOTE for assigment into `globalenv()` when checking package
+
+## Minor
+- added REPL mode (`maxima.repl()`)
+
+# rim 0.7.1
+## Modifications
+- R6 class finalize() now private, as required by package
+- fixed failing example for `maxima.load()` under Fedora (#47) and added testing file
+
 # rim 0.7.0
 ## Modification
 - fixes faulty parsing of matrices
